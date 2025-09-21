@@ -4,6 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <name>Zwift to Garmin Challenge Converter</name>
+    <description>Modifies Zwift FIT files to make them count for Garmin badges and challenges by changing device metadata</description>
+
     <groupId>com.github.drauf</groupId>
     <artifactId>zwift-to-garmin-challenge-converter</artifactId>
     <version>1.0-SNAPSHOT</version>
