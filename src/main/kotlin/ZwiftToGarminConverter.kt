@@ -1,4 +1,4 @@
-package org.example
+package com.github.drauf
 
 import com.garmin.fit.*
 import java.io.File
@@ -24,7 +24,7 @@ class ZwiftToGarminConverter(private val verbose: Boolean = false) {
         // Target device info for spoofing
         private val targetProductName = GarminProduct.getStringFromValue(TARGET_DEVICE_PRODUCT)
     }
-    
+
     private fun log(message: String) {
         if (verbose) {
             println(message)
@@ -256,13 +256,13 @@ class ZwiftToGarminConverter(private val verbose: Boolean = false) {
 
     /**
      * Processes either a single file or all FIT files in a directory
-     * 
+     *
      * @param inputPath Path to file or directory
      * @return Pair of (successful conversions, total files processed)
      */
     fun processInput(inputPath: String): Pair<Int, Int> {
         val inputFile = File(inputPath)
-        
+
         return if (inputFile.isDirectory) {
             processBatch(inputFile)
         } else {
@@ -271,39 +271,39 @@ class ZwiftToGarminConverter(private val verbose: Boolean = false) {
             if (success) Pair(1, 1) else Pair(0, 1)
         }
     }
-    
+
     /**
      * Processes all FIT files in a directory
-     * 
+     *
      * @param directory Directory to process
      * @return Pair of (successful conversions, total files processed)
      */
     private fun processBatch(directory: File): Pair<Int, Int> {
         val fitFiles = directory.listFiles { file ->
-            file.isFile && file.name.endsWith(".fit", ignoreCase = true) && 
+            file.isFile && file.name.endsWith(".fit", ignoreCase = true) &&
             !file.name.contains(OUTPUT_SUFFIX, ignoreCase = true) // Skip already converted files
         }?.sortedBy { it.name } ?: emptyList()
-        
+
         if (fitFiles.isEmpty()) {
             println("❌ No FIT files found in directory: ${directory.absolutePath}")
             return Pair(0, 0)
         }
-        
+
         println("📁 Found ${fitFiles.size} FIT files in: ${directory.absolutePath}")
         println()
-        
+
         var successCount = 0
         var totalFiles = fitFiles.size
-        
+
         fitFiles.forEachIndexed { index, file ->
             val fileNumber = index + 1
             val fileName = file.name
             val outputPath = generateOutputPath(file.absolutePath)
-            
+
             print("[$fileNumber/$totalFiles] Processing: $fileName...")
-            
+
             val success = convertFitFile(file.absolutePath, outputPath)
-            
+
             if (success) {
                 println(" ✅")
                 successCount++
@@ -311,10 +311,10 @@ class ZwiftToGarminConverter(private val verbose: Boolean = false) {
                 println(" ❌")
             }
         }
-        
+
         return Pair(successCount, totalFiles)
     }
-    
+
 
     /**
      * Formats byte count into human-readable string
@@ -348,7 +348,7 @@ fun main(args: Array<String>) {
         printUsage()
         return
     }
-    
+
     val inputFile = File(inputPath)
     if (!inputFile.exists()) {
         println("❌ Input path does not exist: $inputPath")
@@ -374,13 +374,13 @@ fun main(args: Array<String>) {
         println("   Total files: $totalFiles")
         println("   Successful: $successCount")
         println("   Failed: ${totalFiles - successCount}")
-        
+
         if (successCount > 0) {
             println()
             println("🎉 $successCount file(s) converted successfully!")
             println("   Upload the *_edge840.fit files to Garmin Connect.")
         }
-        
+
         if (successCount < totalFiles) {
             println()
             println("⚠️  ${totalFiles - successCount} file(s) failed to convert.")

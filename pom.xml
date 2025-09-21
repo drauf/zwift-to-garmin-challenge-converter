@@ -55,7 +55,8 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.1</version>
                 <configuration>
-                    <mainClass>MainKt</mainClass>
+                    <mainClass>com.github.drauf.ZwiftToGarminConverterKt</mainClass>
+                    <commandlineArgs>${exec.args}</commandlineArgs>
                 </configuration>
             </plugin>
         </plugins>

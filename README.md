@@ -18,21 +18,16 @@ This tool modifies Zwift FIT files to appear as if they came from a **Garmin Edg
 
 ## Usage
 
-### Build:
-```bash
-mvn clean package
-```
-
 ### Convert files:
 ```bash
 # Single file
-java -jar target/zwift-to-garmin-converter.jar "My Zwift Ride.fit"
+mvn exec:java -Dexec.args="'My Zwift Ride.fit'"
 
 # Entire directory
-java -jar target/zwift-to-garmin-converter.jar /path/to/zwift/activities
+mvn exec:java -Dexec.args="/path/to/zwift/activities"
 
 # Verbose output
-java -jar target/zwift-to-garmin-converter.jar -v "My Zwift Ride.fit"
+mvn exec:java -Dexec.args="-v 'My Zwift Ride.fit'"
 ```
 
 **Manually upload the `*_edge840.fit` files to Garmin Connect.**
@@ -40,3 +35,4 @@ java -jar target/zwift-to-garmin-converter.jar -v "My Zwift Ride.fit"
 ## Requirements
 
 - Java 21 or higher
+- Maven
