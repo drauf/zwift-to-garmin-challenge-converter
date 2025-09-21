@@ -1,38 +1,42 @@
-# 🚴 Zwift to Garmin Challenge Converter
+> [!WARNING]
+> This repository contains a lot of LLM generated code and documentation. :)
+
+# 🚴 Zwift to Garmin challenge converter
 
 **Make your Zwift rides count for Garmin badges and challenges!**
 
-## 🎯 The Problem
+## The problem
 
-When you complete virtual rides on Zwift, the activities are tagged as coming from "Zwift" rather than a Garmin device. This means they **don't count** towards:
-- Garmin Connect badges and challenges
-- Monthly distance/time goals
-- Garmin device-specific achievements
+Zwift activities are tagged as coming from "Zwift" rather than a Garmin device, so they **don't count** towards Garmin Connect badges, challenges, or monthly goals.
 
-Even if you use a Garmin watch or bike computer during your Zwift session, the uploaded FIT file is marked as a Zwift activity.
+## The solution
 
-## 💡 The Solution
-
-This tool modifies Zwift FIT files to make them appear as if they came from a **Garmin Edge 840**. After modification:
+This tool modifies Zwift FIT files to appear as if they came from a **Garmin Edge 840**:
 - ✅ Activities count for Garmin badges and challenges
-- ✅ All your ride data is preserved (power, heart rate, cadence, etc.)
-- ✅ Zwift's custom data fields are maintained
-- ✅ Original files are never modified (creates new files with `_edge840` suffix)
+- ✅ All ride data preserved (power, heart rate, cadence, etc.)
+- ✅ Creates new files with `_edge840` suffix (originals untouched)
 
-## 🚀 Usage
+## Usage
 
-### Prerequisites
-- Java 21 or higher
-- Maven (for building from source)
-
-### Build the project:
+### Build:
 ```bash
 mvn clean package
 ```
 
-### Convert a Zwift FIT file:
+### Convert files:
 ```bash
+# Single file
 java -jar target/zwift-to-garmin-converter.jar "My Zwift Ride.fit"
+
+# Entire directory
+java -jar target/zwift-to-garmin-converter.jar /path/to/zwift/activities
+
+# Verbose output
+java -jar target/zwift-to-garmin-converter.jar -v "My Zwift Ride.fit"
 ```
 
-**Output:** Creates `My Zwift Ride_edge840.fit` that you can upload to Garmin Connect.
+**Manually upload the `*_edge840.fit` files to Garmin Connect.**
+
+## Requirements
+
+- Java 21 or higher
