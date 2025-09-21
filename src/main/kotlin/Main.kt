@@ -14,7 +14,7 @@ import java.io.FileInputStream
  *
  * The tool preserves all ride data while only changing the device metadata.
  */
-class ZwiftToGarminConverter {
+class ZwiftToGarminConverter(private val verbose: Boolean = false) {
 
     companion object {
         private const val TARGET_MANUFACTURER = Manufacturer.GARMIN
@@ -23,6 +23,12 @@ class ZwiftToGarminConverter {
 
         // Target device info for spoofing
         private val targetProductName = GarminProduct.getStringFromValue(TARGET_DEVICE_PRODUCT)
+    }
+    
+    private fun log(message: String) {
+        if (verbose) {
+            println(message)
+        }
     }
 
     /**
@@ -38,8 +44,8 @@ class ZwiftToGarminConverter {
             verifyFileIntegrity(inputFile)
             processFileWithDeviceModification(inputFile, outputPath)
 
-            println("✅ Successfully converted FIT file: $inputPath -> $outputPath")
-            println("   Activities from this file will now count for Garmin badges and challenges")
+            log("✅ Successfully converted FIT file: $inputPath -> $outputPath")
+            log("   Activities from this file will now count for Garmin badges and challenges")
             true
         } catch (e: Exception) {
             println("❌ Error converting FIT file: ${e.message}")
@@ -73,7 +79,7 @@ class ZwiftToGarminConverter {
                 throw RuntimeException("FIT file integrity check failed - file may be corrupted")
             }
         }
-        println("✓ File integrity verified")
+        log("✓ File integrity verified")
     }
 
     /**
@@ -139,27 +145,27 @@ class ZwiftToGarminConverter {
                 // Modify File ID information (overall file metadata)
                 if (mesg.num == MesgNum.FILE_ID) {
                     val fileIdMessage = FileIdMesg(mesg)
-                    println("🔍 Found FileIdMesg - before: manufacturer=${fileIdMessage.manufacturer}, product=${fileIdMessage.product}")
+                    log("🔍 Found FileIdMesg - before: manufacturer=${fileIdMessage.manufacturer}, product=${fileIdMessage.product}")
 
                     fileIdMessage.manufacturer = TARGET_MANUFACTURER
                     fileIdMessage.product = TARGET_DEVICE_PRODUCT
                     isDeviceRelated = true
 
-                    println("🔧 Modified file ID - after: manufacturer=${fileIdMessage.manufacturer}, product=${fileIdMessage.product}")
+                    log("🔧 Modified file ID - after: manufacturer=${fileIdMessage.manufacturer}, product=${fileIdMessage.product}")
                     messageToWrite = fileIdMessage
                 }
 
                 // Modify device information (individual device data during activity)
                 if (mesg.num == MesgNum.DEVICE_INFO) {
                     val deviceInfoMessage = DeviceInfoMesg(mesg)
-                    println("🔍 Found DeviceInfoMesg - before: manufacturer=${deviceInfoMessage.manufacturer}, product=${deviceInfoMessage.product}")
+                    log("🔍 Found DeviceInfoMesg - before: manufacturer=${deviceInfoMessage.manufacturer}, product=${deviceInfoMessage.product}")
 
                     deviceInfoMessage.manufacturer = TARGET_MANUFACTURER
                     deviceInfoMessage.product = TARGET_DEVICE_PRODUCT
                     deviceInfoMessage.productName = targetProductName
                     isDeviceRelated = true
 
-                    println("🔧 Modified device info - after: manufacturer=${deviceInfoMessage.manufacturer}, product=${deviceInfoMessage.product}")
+                    log("🔧 Modified device info - after: manufacturer=${deviceInfoMessage.manufacturer}, product=${deviceInfoMessage.product}")
                     messageToWrite = deviceInfoMessage
                 }
 
@@ -221,19 +227,19 @@ class ZwiftToGarminConverter {
         messageCount: Int,
         deviceMetadataModified: Boolean
     ) {
-        println("📈 Processing summary:")
-        println("   Messages processed: $messageCount")
-        println("   Device metadata modified: ${if (deviceMetadataModified) "Yes" else "No"}")
+        log("📈 Processing summary:")
+        log("   Messages processed: $messageCount")
+        log("   Device metadata modified: ${if (deviceMetadataModified) "Yes" else "No"}")
 
         val originalSize = inputFile.length()
         val newSize = outputFile.length()
         val sizeRatio = (newSize.toDouble() / originalSize * 100)
 
-        println("   Original file size: ${formatBytes(originalSize)}")
-        println("   New file size: ${formatBytes(newSize)} (${String.format("%.1f", sizeRatio)}%)")
+        log("   Original file size: ${formatBytes(originalSize)}")
+        log("   New file size: ${formatBytes(newSize)} (${String.format("%.1f", sizeRatio)}%)")
 
         if (sizeRatio < 90) {
-            println("   ℹ️  File size reduction is normal due to removal of computed fields")
+            log("   ℹ️  File size reduction is normal due to removal of computed fields")
         }
     }
 
@@ -247,6 +253,68 @@ class ZwiftToGarminConverter {
             "${inputPath}$OUTPUT_SUFFIX.fit"
         }
     }
+
+    /**
+     * Processes either a single file or all FIT files in a directory
+     * 
+     * @param inputPath Path to file or directory
+     * @return Pair of (successful conversions, total files processed)
+     */
+    fun processInput(inputPath: String): Pair<Int, Int> {
+        val inputFile = File(inputPath)
+        
+        return if (inputFile.isDirectory) {
+            processBatch(inputFile)
+        } else {
+            val outputPath = generateOutputPath(inputPath)
+            val success = convertFitFile(inputPath, outputPath)
+            if (success) Pair(1, 1) else Pair(0, 1)
+        }
+    }
+    
+    /**
+     * Processes all FIT files in a directory
+     * 
+     * @param directory Directory to process
+     * @return Pair of (successful conversions, total files processed)
+     */
+    private fun processBatch(directory: File): Pair<Int, Int> {
+        val fitFiles = directory.listFiles { file ->
+            file.isFile && file.name.endsWith(".fit", ignoreCase = true) && 
+            !file.name.contains(OUTPUT_SUFFIX, ignoreCase = true) // Skip already converted files
+        }?.sortedBy { it.name } ?: emptyList()
+        
+        if (fitFiles.isEmpty()) {
+            println("❌ No FIT files found in directory: ${directory.absolutePath}")
+            return Pair(0, 0)
+        }
+        
+        println("📁 Found ${fitFiles.size} FIT files in: ${directory.absolutePath}")
+        println()
+        
+        var successCount = 0
+        var totalFiles = fitFiles.size
+        
+        fitFiles.forEachIndexed { index, file ->
+            val fileNumber = index + 1
+            val fileName = file.name
+            val outputPath = generateOutputPath(file.absolutePath)
+            
+            print("[$fileNumber/$totalFiles] Processing: $fileName...")
+            
+            val success = convertFitFile(file.absolutePath, outputPath)
+            
+            if (success) {
+                println(" ✅")
+                successCount++
+            } else {
+                println(" ❌")
+            }
+        }
+        
+        return Pair(successCount, totalFiles)
+    }
+    
 
     /**
      * Formats byte count into human-readable string
@@ -273,19 +341,53 @@ fun main(args: Array<String>) {
         return
     }
 
-    val converter = ZwiftToGarminConverter()
-    val inputPath = args[0]
-    val outputPath = converter.generateOutputPath(inputPath)
-
-    val success = converter.convertFitFile(inputPath, outputPath)
-
-    if (success) {
-        println()
-        println("🎉 Conversion completed! Upload '$outputPath' to Garmin Connect.")
-    } else {
-        println()
-        println("💥 Conversion failed. Please check the error messages above.")
+    // Parse arguments
+    val verbose = args.contains("--verbose") || args.contains("-v")
+    val inputPath = args.find { !it.startsWith("-") } ?: run {
+        println("❌ No input file or directory specified")
+        printUsage()
+        return
+    }
+    
+    val inputFile = File(inputPath)
+    if (!inputFile.exists()) {
+        println("❌ Input path does not exist: $inputPath")
         kotlin.system.exitProcess(1)
+    }
+
+    val converter = ZwiftToGarminConverter(verbose)
+    val (successCount, totalFiles) = converter.processInput(inputPath)
+
+    println()
+    if (totalFiles == 1) {
+        // Single file processing
+        if (successCount == 1) {
+            val outputPath = converter.generateOutputPath(inputPath)
+            println("🎉 Conversion completed! Upload '$outputPath' to Garmin Connect.")
+        } else {
+            println("💥 Conversion failed. Please check the error messages above.")
+            kotlin.system.exitProcess(1)
+        }
+    } else {
+        // Batch processing summary
+        println("📊 Batch Processing Summary:")
+        println("   Total files: $totalFiles")
+        println("   Successful: $successCount")
+        println("   Failed: ${totalFiles - successCount}")
+        
+        if (successCount > 0) {
+            println()
+            println("🎉 $successCount file(s) converted successfully!")
+            println("   Upload the *_edge840.fit files to Garmin Connect.")
+        }
+        
+        if (successCount < totalFiles) {
+            println()
+            println("⚠️  ${totalFiles - successCount} file(s) failed to convert.")
+            if (successCount == 0) {
+                kotlin.system.exitProcess(1)
+            }
+        }
     }
 }
 
@@ -293,13 +395,21 @@ fun main(args: Array<String>) {
  * Prints usage instructions
  */
 private fun printUsage() {
-    println("Usage: java -jar zwift-to-garmin-converter.jar <input-fit-file>")
+    println("Usage: java -jar zwift-to-garmin-converter.jar [OPTIONS] <input-file-or-directory>")
     println()
-    println("Examples:")
+    println("Options:")
+    println("  -v, --verbose    Show detailed processing information")
+    println()
+    println("Single file:")
     println("  java -jar zwift-to-garmin-converter.jar my_zwift_ride.fit")
-    println("  java -jar zwift-to-garmin-converter.jar \"Zwift - Race on London.fit\"")
+    println("  java -jar zwift-to-garmin-converter.jar --verbose \"Zwift - Race on London.fit\"")
+    println()
+    println("Batch processing (directory):")
+    println("  java -jar zwift-to-garmin-converter.jar /path/to/zwift/activities")
+    println("  java -jar zwift-to-garmin-converter.jar -v \"C:\\Users\\Me\\Zwift\\Activities\"")
     println()
     println("Output:")
-    println("  Creates a new file with '_edge840' suffix (e.g., my_zwift_ride_edge840.fit)")
-    println("  Upload this new file to Garmin Connect to count for challenges!")
+    println("  Creates new files with '_edge840' suffix (e.g., my_zwift_ride_edge840.fit)")
+    println("  Upload these new files to Garmin Connect to count for challenges!")
+    println("  Existing *_edge840.fit files are automatically skipped in batch mode.")
 }
